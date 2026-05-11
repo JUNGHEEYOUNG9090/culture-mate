@@ -61,8 +61,8 @@
 
 ### 📑 파트별 문서
 
-- **[🚀 Backend 상세 가이드 바로가기](./backend/README.md)**: API 명세, DB 구조, 서버 명령어
-- **[🎨 Frontend 상세 가이드 바로가기](./frontend/README.md)**: 컴포넌트 구조, 라우팅, 디자인 시스템
+- **[🚀 Backend 상세 가이드 바로가기](./culture-mate-BACK/README.md)**: API 명세, DB 구조, 서버 명령어
+- **[🎨 Frontend 상세 가이드 바로가기](./culture-mate-FRONT/README.md)**: 컴포넌트 구조, 라우팅, 디자인 시스템
 
 ---
 
