@@ -52,6 +52,20 @@
 
 ---
 
+## 📖 상세 작업 기록 및 가이드
+
+### 🧠 프로젝트 노션 (Development Log)
+
+- **[🔗 Culture-Mate 프로젝트 노션 바로가기](https://culturemate.notion.site)**
+  > 기획 의도, 상세 구현 과정 및 개발 기록은 위 노션 페이지에서 확인하실 수 있습니다.
+
+### 📑 파트별 문서
+
+- **[🚀 Backend 상세 가이드 바로가기](./backend/README.md)**: API 명세, DB 구조, 서버 명령어
+- **[🎨 Frontend 상세 가이드 바로가기](./frontend/README.md)**: 컴포넌트 구조, 라우팅, 디자인 시스템
+
+---
+
 ## 🚀 시작하기 (Quick Start)
 
 ### 1. Backend 서버 실행
@@ -66,15 +80,6 @@ npm install
 npm run dev
 
 
-## 📖 상세 작업 기록 및 가이드
-
-### 🧠 프로젝트 노션 (Development Log)
-- **[🔗 Culture-Mate 프로젝트 노션 바로가기](https://culturemate.notion.site)**
-> 기획 의도, 상세 구현 과정 및 개발 기록은 위 노션 페이지에서 확인하실 수 있습니다.
-
-### 📑 파트별 문서
-- **[🚀 Backend 상세 가이드 바로가기](./backend/README.md)**: API 명세, DB 구조, 서버 명령어
-- **[🎨 Frontend 상세 가이드 바로가기](./frontend/README.md)**: 컴포넌트 구조, 라우팅, 디자인 시스템
 
 ---
 ```
