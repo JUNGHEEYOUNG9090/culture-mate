@@ -29,7 +29,6 @@
 
 - [**backend/**](./backend): Spring Boot 기반 REST API 서버
 - [**frontend/**](./frontend): Next.js 기반 클라이언트 웹 애플리케이션
-- [**docs/**](./docs): 아키텍처 설계서 및 프로젝트 관련 문서 자료
 
 ---
 
