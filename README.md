@@ -64,12 +64,15 @@
 cd backend
 ./gradlew bootRun
 
+```
+
 ### 2. Frontend 클라이언트 실행
+
+```bash
+
 cd frontend
 npm install
 npm run dev
-
-
+```
 
 ---
-```
