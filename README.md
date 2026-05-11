@@ -1,4 +1,5 @@
 # 🎭 Culture-Mate: 문화 생활 통합 플랫폼
+
 > **Full-stack Project (Spring Boot 3.5 & Next.js 15 Integration)**
 
 'Culture-Mate'는 사용자가 문화 이벤트를 발견하고, 소모임(Together)을 통해 함께 활동하며, 실시간 채팅으로 소통할 수 있는 모던 웹 애플리케이션입니다. 본 저장소는 백엔드와 프론트엔드 코드를 통합하여 관리합니다.
@@ -8,6 +9,7 @@
 ## 🛠 전체 기술 스택 (System Tech Stack)
 
 ### [Backend]
+
 - **Framework:** Java 21, Spring Boot 3.5.5
 - **Database:** Oracle Database (운영), H2 (개발)
 - **Security:** Spring Security & JWT (JJWT 0.12.5)
@@ -15,6 +17,7 @@
 - **API Docs:** SpringDoc OpenAPI 2.8.12 (Swagger)
 
 ### [Frontend]
+
 - **Framework:** Next.js 15.4.4 (App Router), React 19.1.0
 - **Build Tool:** Turbopack
 - **Styling:** Tailwind CSS 4.1.11 (Responsive Design)
@@ -44,14 +47,34 @@
 
 상세한 환경 설정 및 실행 방법은 각 폴더의 문서를 참고해 주세요.
 
-* **[🚀 Backend 상세 가이드 바로가기](./backend/README.md)**: API 명세, DB 구조, 서버 명령어
-* **[🎨 Frontend 상세 가이드 바로가기](./frontend/README.md)**: 컴포넌트 구조, 라우팅, 디자인 시스템
+- **[🚀 Backend 상세 가이드 바로가기](./backend/README.md)**: API 명세, DB 구조, 서버 명령어
+- **[🎨 Frontend 상세 가이드 바로가기](./frontend/README.md)**: 컴포넌트 구조, 라우팅, 디자인 시스템
 
 ---
 
 ## 🚀 시작하기 (Quick Start)
 
 ### 1. Backend 서버 실행
+
 ```bash
 cd backend
 ./gradlew bootRun
+
+### 2. Frontend 클라이언트 실행
+cd frontend
+npm install
+npm run dev
+
+
+## 📖 상세 작업 기록 및 가이드
+
+### 🧠 프로젝트 노션 (Development Log)
+- **[🔗 Culture-Mate 프로젝트 노션 바로가기](https://culturemate.notion.site)**
+> 기획 의도, 상세 구현 과정 및 개발 기록은 위 노션 페이지에서 확인하실 수 있습니다.
+
+### 📑 파트별 문서
+- **[🚀 Backend 상세 가이드 바로가기](./backend/README.md)**: API 명세, DB 구조, 서버 명령어
+- **[🎨 Frontend 상세 가이드 바로가기](./frontend/README.md)**: 컴포넌트 구조, 라우팅, 디자인 시스템
+
+---
+```
