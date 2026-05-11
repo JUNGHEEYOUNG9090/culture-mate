@@ -61,7 +61,7 @@
 ### 1. Backend 서버 실행
 
 ```bash
-cd backend
+cd culture-mate-BACK
 ./gradlew bootRun
 
 ```
@@ -70,7 +70,7 @@ cd backend
 
 ```bash
 
-cd frontend
+cd culture-mate-FRONT
 npm install
 npm run dev
 ```
