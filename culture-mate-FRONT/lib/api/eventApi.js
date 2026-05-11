@@ -1,0 +1,569 @@
+import { EVENT_TYPES, getEventTypeLabel } from '@/constants/eventTypes';
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8080";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api/v1";
+const ENDPOINT = process.env.NEXT_PUBLIC_ENDPOINT_EVENTS || "/events";
+
+const API_URL = `${BASE_URL}${API_BASE}${ENDPOINT}`;
+
+// ===== 이벤트 검색 관련 =====
+
+// ==== 호환 레이어: 백엔드 Enum(EventType)과 대소문자/표기 차이 정규화 ====
+// BACKEND: CLASSIC (enum)
+// FRONT: "CLASSICAL" 또는 "Classical"이 올 수도 있으므로 요청 직전에 보정
+const normalizeEventType = (t) => {
+  if (t === "CLASSICAL" || t === "Classical") return "CLASSIC";
+  return t;
+};
+
+/**
+ * 검색 파라미터를 URLSearchParams로 변환하는 헬퍼 함수
+ * @param {Object} searchParams - 검색 조건
+ * @returns {URLSearchParams} 변환된 쿼리 파라미터
+ */
+
+const buildQueryParams = (searchParams) => {
+  const queryParams = new URLSearchParams();
+
+  // 기본 검색 조건들
+  if (searchParams.keyword) queryParams.append("keyword", searchParams.keyword);
+  if (searchParams.eventType) {
+    queryParams.append("eventType", normalizeEventType(searchParams.eventType));
+  }
+  if (searchParams.startDate)
+    queryParams.append("startDate", searchParams.startDate);
+  if (searchParams.endDate) queryParams.append("endDate", searchParams.endDate);
+  if (searchParams.empty !== undefined)
+    queryParams.append("empty", searchParams.empty);
+
+  // 페이지네이션 및 정렬 파라미터 추가
+  if (searchParams.limit) queryParams.append("limit", searchParams.limit);
+  if (searchParams.offset) queryParams.append("offset", searchParams.offset);
+  if (searchParams.sortBy) queryParams.append("sortBy", searchParams.sortBy);
+
+  // ======= 조건부 분기: 지역 파라미터 처리 =======
+  // 새로운 region.level 방식 우선 처리
+  if (searchParams["region.level1"]) {
+    queryParams.append("region.level1", searchParams["region.level1"]);
+  }
+  if (searchParams["region.level2"]) {
+    queryParams.append("region.level2", searchParams["region.level2"]);
+  }
+  if (searchParams["region.level3"]) {
+    queryParams.append("region.level3", searchParams["region.level3"]);
+  }
+
+  // 하위 호환성: 기존 regionDto 방식 (새 방식이 없을 때만)
+  if (searchParams.regionDto && !searchParams["region.level1"]) {
+    if (searchParams.regionDto.level1) {
+      queryParams.append("region.level1", searchParams.regionDto.level1);
+    }
+    if (searchParams.regionDto.level2) {
+      queryParams.append("region.level2", searchParams.regionDto.level2);
+    }
+    if (searchParams.regionDto.level3) {
+      queryParams.append("region.level3", searchParams.regionDto.level3);
+    }
+  }
+  // ===============================================
+
+  return queryParams;
+};
+
+/**
+ * 통합 이벤트 조회 (백엔드 /search API 사용)
+ * @param {Object} searchParams - 검색 조건 및 페이지네이션 옵션
+ * @param {string} searchParams.keyword - 검색 키워드
+ * @param {string} searchParams["region.level1"] - 1차 지역 (예: 서울특별시)
+ * @param {string} searchParams["region.level2"] - 2차 지역 (예: 강남구)
+ * @param {string} searchParams["region.level3"] - 3차 지역 (예: 역삼동)
+ * @param {Object} searchParams.regionDto - 기존 지역 정보 (하위 호환성)
+ * @param {string} searchParams.eventType - 이벤트 타입 (MUSICAL, MOVIE, THEATER, etc.)
+ * @param {string} searchParams.startDate - 시작일 (YYYY-MM-DD)
+ * @param {string} searchParams.endDate - 종료일 (YYYY-MM-DD)
+ * @param {number} searchParams.limit - 조회 개수 제한 (예: 4)
+ * @param {number} searchParams.offset - 시작점 (기본값: 0)
+ * @param {string} searchParams.sortBy - 정렬 기준 ("latest"|"popular"|"date", 기본값: "latest")
+ * @param {boolean} searchParams.empty - 빈 값 여부
+ * @returns {Promise<Array>} 이벤트 목록
+ *
+ * @example
+ * // 메인페이지용: 최신 4개 이벤트
+ * getEvents({ limit: 4 })
+ *
+ * // 인기순으로 10개 이벤트 (2페이지)
+ * getEvents({ limit: 10, offset: 10, sortBy: "popular" })
+ *
+ * // 키워드 검색
+ * getEvents({ keyword: "콘서트", limit: 20 })
+ */
+export const getEvents = async (searchParams = {}) => {
+  try {
+    const { eventTypes, ...singleParamsOnly } = searchParams || {};
+    const queryParams = buildQueryParams(singleParamsOnly);
+
+    // ======= 백엔드 API 통합: 모든 요청이 /search 엔드포인트 사용 =======
+    // /recent 엔드포인트 제거됨 - /search로 통합
+    const endpoint = "/search";
+    // ========================================================================
+
+    const url = `${API_URL}${endpoint}${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+
+    // JWT 토큰을 헤더에 포함 (인증된 사용자의 관심 상태 조회를 위해)
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`이벤트 조회 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const totalCount = response.headers.get("Total-Count");
+
+    // limit이 설정된 경우에만 헤더 정보와 함께 반환 (페이지네이션 정보 포함)
+    if (searchParams.limit) {
+      return {
+        data: data,
+        totalCount: totalCount ? parseInt(totalCount, 10) : data.length
+      };
+    }
+
+    // limit이 없으면 기존 방식 유지 (하위 호환성)
+    return data;
+  } catch (error) {
+    console.error("이벤트 조회 에러:", error);
+    throw error;
+  }
+};
+
+/**
+ * 이벤트 검색 (getEvents wrapper)
+ * @param {Object} searchParams - 검색 조건 (getEvents와 동일한 파라미터)
+ * @returns {Promise<Array>} 검색된 이벤트 목록
+ */
+export const searchEvents = async (searchParams = {}) => {
+  return await getEvents(searchParams);
+};
+
+/**
+ * 여러 eventType을 지원하는 안전한 검색 유틸
+ * - 백엔드가 단일 eventType만 받으므로 타입별로 병렬 호출 후 id 기준 병합
+ * - baseParams에는 eventType/eventTypes를 넣지않음
+ * @param {string[]} types - 예: ["CLASSIC","DANCE"]
+ * @param {Object} baseParams - keyword/날짜/지역 등 공통 필터
+ * @returns {Promise<Array>} 병합된 이벤트 배열(중복 제거)
+ */
+export const searchEventsByTypes = async (types = [], baseParams = {}) => {
+  const list = Array.isArray(types)
+    ? types.map((t) => normalizeEventType(t)).filter(Boolean)
+    : [];
+
+  if (list.length === 0) {
+    return await searchEvents(baseParams);
+  }
+  if (list.length === 1) {
+    return await searchEvents({ ...baseParams, eventType: list[0] });
+  }
+
+  const results = await Promise.all(
+    list.map((t) => searchEvents({ ...baseParams, eventType: t }))
+  );
+
+  const seen = new Set();
+  const merged = [];
+  for (const arr of results) {
+    if (!Array.isArray(arr)) continue;
+    for (const ev of arr) {
+      const key = ev?.id;
+      if (key == null || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(ev);
+    }
+  }
+  return merged;
+};
+
+/**
+ * 특정 이벤트 상세 조회
+ * @param {number} eventId - 이벤트 ID
+ * @returns {Promise<Object>} 이벤트 상세 정보
+ */
+export const getEventById = async (eventId) => {
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+    };
+    
+    // 클라이언트 사이드에서만 localStorage 접근
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
+    const response = await fetch(`${API_URL}/${eventId}`, {
+      method: "GET",
+      credentials: "include",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`이벤트 조회 실패: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("이벤트 조회 에러:", error);
+    throw error;
+  }
+};
+
+/**
+ * FormData 구성 헬퍼 함수
+ * @param {Object} eventData - 이벤트 데이터
+ * @param {File} mainImage - 메인 이미지 파일
+ * @param {File[]} imagesToAdd - 추가 이미지 파일들
+ * @returns {FormData} 구성된 FormData 객체
+ */
+const buildFormData = (eventData, mainImage, imagesToAdd) => {
+  const formData = new FormData();
+
+  formData.append("eventRequestDto", JSON.stringify(eventData));
+
+  if (mainImage) {
+    formData.append("mainImage", mainImage);
+  }
+
+  if (imagesToAdd && imagesToAdd.length > 0) {
+    imagesToAdd.forEach((image) => {
+      formData.append("imagesToAdd", image);
+    });
+  }
+
+  return formData;
+};
+
+/**
+ * 이벤트 생성 (이미지 포함/미포함 통합)
+ * 백엔드에서 이미지 유무 자동 처리하므로 프론트엔드 분기 불필요
+ * @param {Object} eventData - 이벤트 데이터
+ * @param {File} mainImage - 메인 이미지 파일 (선택사항)
+ * @param {File[]} imagesToAdd - 추가 이미지 파일들 (선택사항)
+ * @returns {Promise<Object>} 생성된 이벤트 정보
+ */
+export const createEvent = async (
+  eventData,
+  mainImage = null,
+  imagesToAdd = null
+) => {
+  try {
+    // ======= 항상 FormData 방식 사용 =======
+    // 백엔드가 이미지 없어도 multipart/form-data로 처리
+    const formData = buildFormData(eventData, mainImage, imagesToAdd);
+    // =====================================
+
+    const response = await fetch(`${API_URL}`, {
+      method: "POST",
+      credentials: "include",
+      body: formData, // 항상 FormData
+    });
+
+    if (!response.ok) {
+      throw new Error(`이벤트 생성 실패: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("이벤트 생성 에러:", error);
+    throw error;
+  }
+};
+
+/**
+ * 이벤트 수정 (이미지 포함/미포함 통합, 인증 필요)
+ * 백엔드에서 이미지 유무 자동 처리하므로 프론트엔드 분기 불필요
+ * @param {number} eventId - 이벤트 ID
+ * @param {Object} eventData - 수정할 이벤트 데이터
+ * @param {File} mainImage - 메인 이미지 파일 (선택사항)
+ * @param {File[]} imagesToAdd - 추가할 이미지 파일들 (선택사항)
+ * @returns {Promise<Object>} 수정된 이벤트 정보
+ */
+export const updateEvent = async (
+  eventId,
+  eventData,
+  mainImage = null,
+  imagesToAdd = null
+) => {
+  try {
+    // ======= 항상 FormData 방식 사용 =======
+    // 백엔드가 이미지 없어도 multipart/form-data로 처리
+    const formData = buildFormData(eventData, mainImage, imagesToAdd);
+    // =====================================
+
+    const response = await fetch(`${API_URL}/${eventId}`, {
+      method: "PUT",
+      credentials: "include",
+      body: formData, // 항상 FormData
+    });
+
+    if (!response.ok) {
+      throw new Error(`이벤트 수정 실패: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("이벤트 수정 에러:", error);
+    throw error;
+  }
+};
+
+// ===== 이벤트 관심 등록 관련 =====
+
+/**
+ * POST /api/v1/events/{eventId}/interest
+ * 이벤트 관심 등록/해제 (인증 필요)
+ * @param {number} eventId - 이벤트 ID
+ * @returns {Promise<string>} 관심 등록 결과 메시지
+ */
+export const toggleEventInterest = async (eventId) => {
+  if (!eventId) throw new Error("eventId is required");
+  const url = `${API_URL}/${eventId}/interest`;
+  // (선택) JWT 사용 시 로컬스토리지 등에서 토큰을 읽어 Authorization 추가
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const headers = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers,
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+    }
+    return text;
+  } catch (e) {
+    console.error("[toggleEventInterest] fetch failed:", url, e);
+    throw e;
+  }
+};
+
+/**
+ * GET /api/v1/events/interests
+ * 사용자 관심 이벤트 목록 조회 (인증 필요)
+ * @returns {Promise<Array>} 관심 이벤트 목록
+ */
+export const getUserInterestEvents = async () => {
+  const url = `${API_URL}/interests`;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers,
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+
+    return await res.json();
+  } catch (e) {
+    console.error("[getUserInterestEvents] fetch failed:", url, e);
+    throw e;
+  }
+};
+
+/**
+ * DELETE /api/v1/events/{id}
+ * 이벤트 삭제 (인증 필요)
+ * @param {number} eventId - 삭제할 이벤트 ID
+ * @returns {Promise<void>} 삭제 성공
+ */
+export const deleteEvent = async (eventId) => {
+  try {
+    const response = await fetch(`${API_URL}/${eventId}`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`이벤트 삭제 실패: ${response.status}`);
+    }
+
+    // 204 상태 코드 처리 추가
+    if (response.status === 204) {
+      return { success: true, message: "이벤트가 성공적으로 삭제되었습니다." };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("이벤트 삭제 에러:", error);
+    throw error;
+  }
+};
+
+/**
+ * GET /api/v1/events/{eventId}/content-images
+ * 이벤트 설명 이미지 목록 조회
+ * @param {number} eventId - 이벤트 ID
+ * @returns {Promise<Array>} 이미지 경로 배열
+ */
+export const getEventContentImages = async (eventId) => {
+  try {
+    const response = await fetch(`${API_URL}/${eventId}/content-images`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`이벤트 이미지 목록 조회 실패: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("이벤트 이미지 목록 조회 에러:", error);
+    throw error;
+  }
+};
+
+// ===== 유틸리티 함수 =====
+
+export const isValidDateFormat = (dateString) => {
+  const regex = /^\d{4}-\d{2}-\d{2}$/;
+  return regex.test(dateString);
+};
+
+export const validateEventData = (eventData) => {
+  const errors = [];
+
+  if (!eventData.title || eventData.title.trim().length === 0) {
+    errors.push("이벤트 제목은 필수입니다.");
+  }
+
+  // EVENT_TYPES는 이제 { MUSICAL: { value: 'MUSICAL', label: '뮤지컬' } } 형태이므로
+  // eventData.eventType 문자열 값이 유효한지 확인하려면 Object.values로 검증
+  const validEventTypes = Object.values(EVENT_TYPES).map(type => type.value);
+  if (!eventData.eventType || !validEventTypes.includes(eventData.eventType)) {
+    errors.push("올바른 이벤트 타입을 선택해주세요.");
+  }
+
+  if (!eventData.eventLocation || eventData.eventLocation.trim().length === 0) {
+    errors.push("이벤트 장소는 필수입니다.");
+  }
+
+  if (!eventData.description || eventData.description.trim().length === 0) {
+    errors.push("이벤트 설명은 필수입니다.");
+  }
+
+  if (eventData.startDate && !isValidDateFormat(eventData.startDate)) {
+    errors.push("시작일 형식이 올바르지 않습니다. (YYYY-MM-DD)");
+  }
+
+  if (eventData.endDate && !isValidDateFormat(eventData.endDate)) {
+    errors.push("종료일 형식이 올바르지 않습니다. (YYYY-MM-DD)");
+  }
+
+  if (
+    eventData.startDate &&
+    eventData.endDate &&
+    eventData.startDate > eventData.endDate
+  ) {
+    errors.push("시작일은 종료일보다 이전이어야 합니다.");
+  }
+
+  if (
+    eventData.durationMin !== undefined &&
+    (eventData.durationMin < 0 || !Number.isInteger(eventData.durationMin))
+  ) {
+    errors.push("소요시간은 0 이상의 정수여야 합니다.");
+  }
+
+  if (
+    eventData.minAge !== undefined &&
+    (eventData.minAge < 0 || !Number.isInteger(eventData.minAge))
+  ) {
+    errors.push("최소 연령은 0 이상의 정수여야 합니다.");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+};
+
+/**
+ * 백엔드 EventDto.ResponseCard를 PostEventMiniCard 컴포넌트 형태로 변환
+ * @param {Object} eventCard - 백엔드에서 받은 이벤트 카드 데이터
+ * @returns {Object|null} PostEventMiniCard 컴포넌트용 데이터
+ */
+export const transformEventCardData = (eventCard) => {
+  if (!eventCard) return null;
+
+  // 이미지 경로 처리: 백엔드 상대경로를 완전한 URL로 변환
+  const getImageUrl = (path) => {
+    if (!path) return "/img/default_img.svg";
+    if (path.startsWith("http")) return path; // 이미 완전한 URL
+    return `${BASE_URL}${path}`; // 상대경로에 BASE_URL 추가
+  };
+
+  return {
+    eventImage: getImageUrl(eventCard.mainImagePath || eventCard.thumbnailImagePath),
+    eventType: eventCard.eventType || "이벤트",
+    eventName: eventCard.title || "이벤트명",
+    description: eventCard.description || "",
+    score: eventCard.avgRating || 0,
+    recommendations: eventCard.interestCount || 0,
+    registeredPosts: eventCard.reviewCount || 0,
+    initialLiked: eventCard.isInterested || false,
+  };
+};
+
+// 기본 export
+const eventApi = {
+  getEvents,
+  getEventById,
+  searchEvents,
+  getEventContentImages,
+  searchEventsByTypes,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  toggleEventInterest,
+  getUserInterestEvents,
+  validateEventData,
+  isValidDateFormat,
+  transformEventCardData,
+};
+
+export default eventApi;

@@ -1,0 +1,177 @@
+"use client";
+
+import { ICONS } from "@/constants/path";
+import Image from "next/image";
+import Gallery from "../global/Gallery";
+import { getEventTypeLabel } from "@/constants/eventTypes";
+import { toAbsoluteImageUrl } from "@/lib/utils/imageUtils";
+
+export default function TogetherGallery(props) {
+  const {
+    togetherId,
+    imgSrc,
+    alt = "",
+    title: titleProp = "모집글 제목",
+    eventType: eventTypeProp = "이벤트유형",
+    eventName: eventNameProp = "이벤트명",
+    group: groupProp,
+    date: dateProp,
+
+    // 서버 스키마
+    id: serverId,
+    meetingDate,
+    currentParticipants,
+    maxParticipants,
+    active, // 모집중 여부
+
+    // 이벤트 스냅샷
+    eventSnapshot,
+
+    // 편집/선택 관련 (InterestWith에서 내려줌)
+    editMode = false,
+    selected = false,
+    onToggleSelect,
+
+    // 관심 초기값
+    isInterested = false,
+
+    // 마감 상태 (명시적으로 전달되면 우선 사용)
+    isClosed: explicitIsClosed,
+
+    ...rest
+  } = props;
+
+  /* 식별자/링크 */
+  const id = serverId ?? togetherId;
+  const href = id ? `/together/${encodeURIComponent(id)}` : "/together";
+
+  /* 커버 이미지 */
+  const rawImagePath =
+    (typeof imgSrc === "string" && imgSrc.trim()) ||
+    eventSnapshot?.eventImage ||
+    eventSnapshot?.mainImagePath ||
+    eventSnapshot?.image ||
+    eventSnapshot?.imgSrc ||
+    eventSnapshot?.thumbnailImagePath ||
+    null;
+
+  const coverSrc = toAbsoluteImageUrl(rawImagePath);
+
+  /* 타이틀/라벨 */
+  const title = titleProp || "모집글 제목";
+  const eventType =
+    getEventTypeLabel(eventSnapshot?.eventType || eventTypeProp) ||
+    "이벤트유형";
+  const eventName =
+    eventSnapshot?.eventName ||
+    eventSnapshot?.name ||
+    eventNameProp ||
+    "이벤트명";
+
+  /* 날짜 유틸 */
+  const parseDate = (d) => {
+    if (!d) return null;
+    const iso = d.length === 10 && d[4] === "-" ? `${d}T00:00:00` : d;
+    const dt = new Date(iso);
+    return Number.isNaN(+dt) ? null : dt;
+  };
+
+  const fmtDate = (d) => {
+    const dt = parseDate(d);
+    if (!dt) return "0000.00.00";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${dt.getFullYear()}.${pad(dt.getMonth() + 1)}.${pad(dt.getDate())}`;
+  };
+
+  const dateStr = meetingDate
+    ? fmtDate(meetingDate)
+    : dateProp
+    ? fmtDate(dateProp)
+    : rest.createdAt
+    ? fmtDate(rest.createdAt)
+    : "0000.00.00";
+
+  /* 인원 */
+  const groupStr = (() => {
+    if (currentParticipants != null && maxParticipants != null) {
+      return `${currentParticipants}/${maxParticipants}`;
+    }
+    if (typeof groupProp === "number") return String(groupProp);
+    if (typeof groupProp === "string" && groupProp.trim())
+      return groupProp.trim();
+    const cc = rest.companionCount ?? rest.maxPeople;
+    if (cc != null) return String(cc);
+    return "명";
+  })();
+
+  /* 백엔드에서 계산된 active 상태를 그대로 사용 */
+  const isClosed = typeof explicitIsClosed === "boolean" ? explicitIsClosed : !active;
+
+  // 페이지 레벨 동기화로 Gallery-List 뷰 간 관심 상태 자동 동기화
+
+  return (
+    <div className="relative">
+      {isClosed && (
+        <div className="absolute top-2 right-2 z-30">
+          <span className="inline-flex items-center px-2 py-0.5 rounded bg-red-600 text-white text-xs font-bold grayscale-0">
+            모집마감
+          </span>
+        </div>
+      )}
+
+      {editMode && (
+        <>
+          <button
+            type="button"
+            className="absolute inset-0 z-20"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelect?.();
+            }}
+            aria-label="select-card"
+          />
+          <div className="absolute top-2 right-2 z-30">
+            <div
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border ${
+                selected
+                  ? "bg-blue-500 text-white border-blue-500"
+                  : "bg-white/90 text-gray-600 border-gray-300"
+              }`}>
+              {selected ? "✓" : ""}
+            </div>
+          </div>
+        </>
+      )}
+
+      <Gallery
+        title={title}
+        src={coverSrc && coverSrc.trim() !== "" ? coverSrc : null}
+        alt={alt || eventName || title}
+        href={editMode ? "#" : href}
+        enableInterest={!editMode}
+        initialInterest={Boolean(isInterested)}
+        togetherId={String(id || "")}
+        type="together"
+        isClosed={isClosed}>
+        <div className="flex items-center gap-2 my-1">
+          <div className="border border-b-2 text-blue-600 bg-blue-50 rounded-4xl px-2">
+            {eventType}
+          </div>
+          <div className="truncate">{eventName}</div>
+        </div>
+
+        <div className="flex gap-4 mt-2">
+          <span className="flex items-center gap-2">
+            <Image src={ICONS.CALENDAR} alt="calendar" width={16} height={16} />
+            {dateStr}
+          </span>
+          <span className="flex items-center gap-2">
+            <Image src={ICONS.GROUP} alt="group" width={20} height={20} />
+            {groupStr}
+          </span>
+        </div>
+      </Gallery>
+    </div>
+  );
+}

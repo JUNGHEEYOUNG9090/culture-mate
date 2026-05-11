@@ -1,0 +1,87 @@
+name: Frontend Docker Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 소스 체크아웃
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. package.json에서 버전 추출
+      - name: Extract version from package.json
+        id: pkg
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Package version: v$VERSION"
+
+      # 3. Docker Buildx 설정
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 4. Docker Hub 로그인
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 5. Docker 이미지 빌드 & 푸시 (버전 태그)
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          build-args: |
+            NEXT_PUBLIC_BASE_URL=${{ vars.NEXT_PUBLIC_BASE_URL }}
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/culturemate-frontend:v${{ steps.pkg.outputs.VERSION }}
+            ${{ vars.DOCKERHUB_USERNAME }}/culturemate-frontend:latest
+          labels: |
+            org.opencontainers.image.version=v${{ steps.pkg.outputs.VERSION }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+          cache-from: type=registry,ref=${{ vars.DOCKERHUB_USERNAME }}/culturemate-frontend:buildcache
+          cache-to: type=registry,ref=${{ vars.DOCKERHUB_USERNAME }}/culturemate-frontend:buildcache,mode=max
+
+      # 6. 서버 배포
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          port: ${{ secrets.SERVER_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /var/www/culturemate/frontend
+
+            echo "🚀 Deploying version v${{ steps.pkg.outputs.VERSION }}"
+
+            # IMAGE_TAG 업데이트 (.env)
+            if grep -q "^IMAGE_TAG=" .env; then
+              sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=v${{ steps.pkg.outputs.VERSION }}/" .env
+            else
+              echo "IMAGE_TAG=v${{ steps.pkg.outputs.VERSION }}" >> .env
+            fi
+
+            # 최신 이미지 pull
+            docker compose pull
+
+            # 컨테이너 재기동
+            docker compose up -d
+
+            # 오래된 이미지 정리 (최근 10개 유지)
+            docker images ${{ vars.DOCKERHUB_USERNAME }}/culturemate-frontend --format "{{.ID}} {{.CreatedAt}}" | tail -n +11 | awk '{print $1}' | xargs -r docker rmi -f || true
+
+            # 실행 중인 컨테이너 확인
+            echo "📦 Running containers:"
+            docker ps --format "table {{.Names}}\t{{.Image}}"
+
+            echo "✅ Deploy complete: v${{ steps.pkg.outputs.VERSION }}"
