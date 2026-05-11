@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:sec="https://www.thymeleaf.org/extras/spring-security" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8" >
+  <title>마이페이지</title>
+</head>
+<body>
+
+<h4>마이페이지</h4>
+
+<div sec:authentication="principal"></div>
+<div>로그인 아이디: <span sec:authentication="principal.username"></span></div>
+
+<div>회원 상태: <span th:text="${#authentication.principal.status}"></span></div>
+
+<div sec:authorize="hasAuthority('MEMBER')">
+  <h4>이 유저는 MEMEBER 권한임</h4>      <!--  권한이 MEMBER 가 아닐 경우 보여주지 않음-->
+</div>
+</body>
+</html>

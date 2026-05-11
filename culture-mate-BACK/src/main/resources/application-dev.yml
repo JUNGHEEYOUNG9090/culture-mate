@@ -1,0 +1,76 @@
+# 개발 환경 설정
+spring:
+  # DevTools 설정 (개발 편의성)
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+      poll-interval: 2s
+      quiet-period: 1s
+    livereload:
+      enabled: true
+
+  # 데이터베이스 설정 (Oracle 사용)
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: ${DB_DRIVER}
+
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: update  # 개발 환경: 엔티티 변경사항 자동 반영
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+        use_sql_comments: true
+
+# 로깅 설정 (개발 환경: 상세 로그)
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace  # 파라미터 바인딩 로그
+
+    com.culturemate.culturemate_api: DEBUG
+    com.culturemate.culturemate_api.service: DEBUG
+    com.culturemate.culturemate_api.controller: DEBUG
+    com.culturemate.culturemate_api.config: DEBUG
+
+    org.springframework.security: DEBUG
+    org.springframework.web.socket: DEBUG
+
+    root: INFO
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+
+  file:
+    name: logs/culturemate-dev.log
+    max-size: 10MB
+    max-history: 7
+    total-size-cap: 100MB
+
+# 이미지 업로드 경로
+custom:
+  path:
+    upload:
+      default: src/main/resources/static/images  # 개발 환경: 프로젝트 경로
+
+# CORS 설정 (개발 환경: 로컬호스트 허용)
+cors:
+  allowed-origins: "http://localhost:3000,http://127.0.0.1:3000"
+  allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
+  allowed-headers: "Content-Type,Authorization,X-Requested-With,Accept,Accept-Language,Origin"
+  allow-credentials: true
+  max-age: 3600
+
+# OpenAPI/Swagger 설정 (개발 환경: 활성화)
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    try-it-out-enabled: true

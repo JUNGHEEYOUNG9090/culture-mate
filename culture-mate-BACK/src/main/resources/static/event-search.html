@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이벤트 검색 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
+        button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; margin-right: 10px; }
+        button:hover { background-color: #0056b3; }
+        button.btn-danger { background-color: #dc3545; }
+        button.btn-danger:hover { background-color: #c82333; }
+        button.btn-secondary { background-color: #6c757d; }
+        button.btn-secondary:hover { background-color: #545b62; }
+        .result { margin-top: 20px; padding: 10px; background-color: #f8f9fa; border-radius: 3px; }
+        .result.error { background-color: #f8d7da; color: #721c24; }
+        .result.success { background-color: #d4edda; color: #155724; }
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .form-row .form-group { flex: 1; margin-bottom: 0; }
+        .test-scenarios { background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ffeaa7; }
+        .scenario-btn { background-color: #ffc107; color: #212529; border: none; padding: 8px 15px; margin: 5px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .scenario-btn:hover { background-color: #e0a800; }
+        .toggle-btn { background: none; border: none; color: #007bff; cursor: pointer; text-decoration: underline; }
+        .collapsible { display: none; margin-top: 10px; }
+        .collapsible.show { display: block; }
+        .stats { display: flex; gap: 15px; margin-bottom: 20px; }
+        .stat-box { flex: 1; background: #007bff; color: white; padding: 15px; border-radius: 5px; text-align: center; }
+        .stat-value { font-size: 20px; font-weight: bold; }
+        .stat-label { font-size: 12px; }
+        .search-history { background-color: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #ddd; }
+        .history-item { background: white; padding: 8px; margin: 5px 0; border-radius: 3px; cursor: pointer; border: 1px solid #ddd; font-size: 13px; }
+        .history-item:hover { background-color: #f0f0f0; }
+        pre { font-size: 12px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 이벤트 검색 테스트</h1>
+        <a href="/event-test.html">[이벤트 관리 메인으로 돌아가기]</a>
+        <a href="/event-create.html">[이벤트 생성 페이지로 이동]</a>
+
+        <!-- 테스트 시나리오 -->
+        <div class="test-scenarios">
+            <h3>🧪 테스트 시나리오</h3>
+            <p>자주 사용하는 검색 패턴을 빠르게 테스트해보세요:</p>
+            <button class="scenario-btn" onclick="loadScenario('all')">전체 조회</button>
+            <button class="scenario-btn" onclick="loadScenario('seoul')">서울 지역</button>
+            <button class="scenario-btn" onclick="loadScenario('concert')">콘서트만</button>
+            <button class="scenario-btn" onclick="loadScenario('recent')">최근 이벤트</button>
+            <button class="scenario-btn" onclick="loadScenario('keyword')">키워드 검색</button>
+            <button class="scenario-btn" onclick="loadScenario('complex')">복합 조건</button>
+        </div>
+
+        <!-- 통계 정보 -->
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="totalSearches">0</div>
+                <div class="stat-label">총 검색 횟수</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="lastResultCount">-</div>
+                <div class="stat-label">마지막 결과 개수</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="averageTime">-</div>
+                <div class="stat-label">평균 응답시간(ms)</div>
+            </div>
+        </div>
+
+        <!-- 검색 폼 -->
+        <div class="section">
+            <h2>🔎 이벤트 검색</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="eventType">이벤트 타입</label>
+                    <select id="eventType">
+                        <option value="">전체</option>
+                        <option value="MUSICAL">뮤지컬</option>
+                        <option value="MOVIE">영화</option>
+                        <option value="THEATER">연극</option>
+                        <option value="EXHIBITION">전시</option>
+                        <option value="CLASSICAL">클래식</option>
+                        <option value="DANCE">무용</option>
+                        <option value="CONCERT">콘서트</option>
+                        <option value="FESTIVAL">페스티벌</option>
+                        <option value="LOCAL_EVENT">지역 행사</option>
+                        <option value="OTHER">기타</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="keyword">키워드</label>
+                    <input type="text" id="keyword" placeholder="이벤트 제목, 설명 등을 검색하세요">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="level1">시/도</label>
+                    <select id="level1"><option value="">선택</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="level2">시/군/구</label>
+                    <select id="level2"><option value="">선택</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="level3">읍/면/동</label>
+                    <select id="level3"><option value="">선택</option></select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="startDate">시작일</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="form-group">
+                    <label for="endDate">종료일</label>
+                    <input type="date" id="endDate">
+                </div>
+            </div>
+            <button onclick="performSearch()">검색</button>
+            <button class="btn-secondary" onclick="clearForm()">초기화</button>
+        </div>
+
+
+
+        <!-- 검색 결과 -->
+        <div class="section">
+            <h2>📋 검색 결과</h2>
+            <div id="searchResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- API 디버깅 정보 -->
+        <div class="section">
+            <button class="toggle-btn" onclick="toggleDebugInfo()">🔧 API 디버깅 정보 보기/숨기기</button>
+            <div id="debugInfo" class="collapsible">
+                <h3>🛠️ API 요청/응답 정보</h3>
+                <div>
+                    <h4>요청 URL:</h4>
+                    <div id="requestUrl" class="result"></div>
+                </div>
+                <div>
+                    <h4>요청 파라미터:</h4>
+                    <div id="requestParams" class="result"></div>
+                </div>
+                <div>
+                    <h4>응답 데이터:</h4>
+                    <div id="responseData" class="result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 검색 히스토리 -->
+        <div class="section">
+            <button class="toggle-btn" onclick="toggleHistory()">📜 검색 히스토리 보기/숨기기</button>
+            <div id="searchHistory" class="collapsible search-history">
+                <h3>검색 기록</h3>
+                <div id="historyList"></div>
+                <button class="btn-secondary" onclick="clearHistory()" style="margin-top: 10px;">기록 삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let searchStats = {
+            totalSearches: 0,
+            responseTimes: [],
+            searchHistory: JSON.parse(localStorage.getItem('eventSearchHistory') || '[]')
+        };
+
+        // 지역 데이터 - event-create.html과 동일한 방식으로 하드코딩
+        const regionData = {
+            "서울특별시": {
+                "강남구": ["개포동", "논현동", "대치동", "삼성동", "신사동", "압구정동", "청담동", "역삼동"],
+                "강동구": ["강일동", "고덕동", "길동", "둔촌동", "명일동", "상일동", "성내동", "암사동", "천호동"],
+                "강북구": ["미아동", "번동", "수유동", "우이동"],
+                "강서구": ["가양동", "개화동", "공항동", "과해동", "내발산동", "등촌동", "마곡동", "방화동", "외발산동", "염창동"],
+                "관악구": ["남현동", "대학동", "도림동", "미성동", "보라매동", "봉천동", "삼성동", "서원동", "신림동", "인헌동", "조원동"],
+                "광진구": ["구의동", "군자동", "능동", "자양동", "중곡동", "화양동"],
+                "구로구": ["가리봉동", "개봉동", "고척동", "구로동", "신도림동", "오류동", "온수동", "천왕동", "항동"],
+                "금천구": ["가산동", "독산동", "시흥동"],
+                "노원구": ["공릉동", "상계동", "월계동", "중계동", "하계동"],
+                "도봉구": ["도봉동", "방학동", "쌍문동", "창동"],
+                "동대문구": ["답십리동", "신설동", "용두동", "이문동", "장안동", "전농동", "제기동", "청량리동", "회기동"],
+                "동작구": ["노량진동", "대방동", "사당동", "상도동", "신대방동", "흑석동"],
+                "마포구": ["공덕동", "구수동", "노고산동", "대흥동", "도화동", "마포동", "망원동", "상암동", "서강동", "서교동", "성산동", "신공덕동", "신수동", "아현동", "연남동", "염리동", "용강동", "토정동", "하중동", "합정동"],
+                "서대문구": ["남가좌동", "냉천동", "대신동", "대현동", "미근동", "북가좌동", "북아현동", "신촌동", "연희동", "영천동", "옥천동", "창천동", "천연동", "현저동", "홍은동", "홍제동"],
+                "서초구": ["내곡동", "반포동", "방배동", "서초동", "신원동", "양재동", "원지동", "잠원동"],
+                "성동구": ["금호동", "마장동", "사근동", "성수동", "송정동", "용답동", "왕십리동", "홍익동"],
+                "성북구": ["길음동", "돈암동", "동선동", "보문동", "삼선동", "석관동", "성북동", "안암동", "월곡동", "장위동", "정릉동", "하월곡동"],
+                "송파구": ["가락동", "거여동", "마천동", "문정동", "방이동", "삼전동", "석촌동", "송파동", "신천동", "오금동", "오륜동", "잠실동", "장지동", "풍납동"],
+                "양천구": ["목동", "신정동", "신월동"],
+                "영등포구": ["당산동", "대림동", "도림동", "문래동", "신길동", "양평동", "양화동", "여의동", "영등포동"],
+                "용산구": ["갈월동", "남영동", "도원동", "동빙고동", "동자동", "뚝섬동", "보광동", "서빙고동", "신계동", "신창동", "원효로동", "이촌동", "이태원동", "주성동", "청파동", "토성동", "한강로동", "한남동", "효창동", "후암동"],
+                "은평구": ["갈현동", "구산동", "녹번동", "대조동", "불광동", "수색동", "신사동", "역촌동", "응암동", "진관동"],
+                "종로구": ["가회동", "견지동", "경운동", "계동", "공평동", "관수동", "관철동", "관훈동", "교남동", "교북동", "구기동", "궁정동", "권농동", "낙원동", "내수동", "내자동", "누상동", "누하동", "도렴동", "동숭동", "묘동", "봉익동", "부암동", "사간동", "사직동", "삼청동", "서린동", "소격동", "송월동", "수송동", "신교동", "신문로1가", "신문로2가", "안국동", "연지동", "연건동", "예지동", "와룡동", "운니동", "원남동", "원서동", "을지로동", "익선동", "인사동", "재동", "적선동", "정독도서관길", "종로1가", "종로2가", "종로3가", "종로4가", "종로5가", "종로6가", "중학동", "청진동", "체부동", "창신동", "충신동", "통의동", "통인동", "팔판동", "평창동", "필동", "행촌동", "혜화동", "홍지동", "화동", "훈정동"],
+                "중구": ["광희동", "다산동", "동화동", "립정동", "명동", "봉래동", "신당동", "쌍림동", "을지로동", "장교동", "정동", "중림동", "충무로", "필동", "황학동", "흥인동"],
+                "중랑구": ["면목동", "상봉동", "중화동", "묵동", "신내동", "망우동"]
+            },
+            "부산광역시": {
+                "중구": ["광복동", "남포동", "대청동", "동광동", "보수동", "부평동", "신창동", "영주동", "중앙동", "창선동", "충무동"],
+                "서구": ["고신대학교", "남부민동", "동대신동", "북부민동", "서대신동", "아미동", "충무동"],
+                "동구": ["범일동", "수정동", "좌천동", "초량동", "통출동"]
+            },
+            "대구광역시": {
+                "중구": ["남일동", "달성동", "대봉동", "대신동", "동인동", "봉산동", "삼덕동", "성내동"],
+                "동구": ["검사동", "공산동", "도평동", "동촌동", "방촌동", "봉무동", "신암동", "신천동"],
+                "서구": ["내당동", "비산동", "상리동", "서광동", "원대동", "이현동", "중리동", "평리동"]
+            },
+            "인천광역시": {
+                "중구": ["관동", "내동", "답동", "도원동", "북성동", "선린동", "송학동", "신생동", "신포동", "유동", "율목동", "인현동", "전동", "중산동", "해안동"],
+                "동구": ["금곡동", "송림동", "송현동", "화수동", "화평동"],
+                "남구": ["관교동", "구월동", "도화동", "문학동", "숭의동", "용현동", "주안동", "학익동"]
+            },
+            "광주광역시": {
+                "동구": ["계림동", "금남로1가", "금남로2가", "금남로3가", "금남로4가", "금남로5가", "남동", "대인동", "동명동", "불로동", "서남동", "소태동", "용산동", "월남동", "장동", "지산동", "충장동", "호남동"],
+                "서구": ["광천동", "금호동", "농성동", "덕흥동", "마륵동", "벽진동", "상무동", "세하동", "쌍촌동", "유촌동", "치평동", "화정동"],
+                "남구": ["구동", "노대동", "대촌동", "도금동", "봉선동", "사동", "서동", "양림동", "양촌동", "월산동", "이장동", "진월동", "행암동"]
+            },
+            "대전광역시": {
+                "중구": ["구완동", "금고동", "낭월동", "대사동", "대흥동", "목동", "문창동", "문화동", "산성동", "석교동", "선화동", "안영동", "어남동", "오류동", "용두동", "유천동", "은행동", "인동", "정동", "중촌동", "태평동", "판암동", "호동"],
+                "동구": ["가양동", "개동", "낭월동", "대동", "대별동", "삼성동", "상소동", "세천동", "소제동", "신인동", "용운동", "이사동", "자양동", "장동", "정동", "중동", "판암동", "하소동", "홍도동"],
+                "서구": ["가수원동", "가장동", "갈마동", "관저동", "괴정동", "기성동", "내동", "도마동", "도안동", "둔산동", "만년동", "매노동", "변동", "복수동", "봉곡동", "산직동", "용문동", "우명동", "원정동", "월평동", "장안동", "정림동", "평촌동"],
+                "유성구": ["관평동", "구성동", "궁동", "노은동", "봉명동", "상대동", "성북동", "신성동", "어은동", "온천동", "원내동", "자운동", "장대동", "전민동", "지족동", "추목동", "탑립동", "하기동", "학하동"]
+            },
+            "울산광역시": {
+                "중구": ["교동", "남외동", "다운동", "달동", "반구동", "복산동", "성남동", "약사동", "장현동", "전하동", "태화동", "학성동"],
+                "동구": ["대송동", "동부동", "미포동", "방어동", "서부동", "전하동", "주전동", "화정동"],
+                "남구": ["고사동", "남화동", "달동", "두왕동", "매암동", "무거동", "부곡동", "삼산동", "선암동", "수암동", "신정동", "야음동", "여천동", "옥동", "용연동", "장생포동", "전하동"]
+            },
+            "세종특별자치시": {
+                "세종시": ["고운동", "나성동", "누리동", "도담동", "보람동", "새롬동", "소담동", "아름동", "어진동", "한솔동", "해밀동"]
+            },
+            "경기도": {
+                "수원시": ["권선구", "영통구", "장안구", "팔달구"],
+                "성남시": ["분당구", "수정구", "중원구"],
+                "고양시": ["덕양구", "일산동구", "일산서구"],
+                "용인시": ["기흥구", "수지구", "처인구"],
+                "부천시": ["중동", "상동", "심곡동", "원미동", "소사동", "오정동", "춘의동", "역곡동", "괴안동", "삼정동", "여월동", "도당동", "약대동", "범박동", "작동"],
+                "안산시": ["단원구", "상록구"],
+                "안양시": ["동안구", "만안구"],
+                "남양주시": ["와부읍", "조안면", "별내면", "별내동", "다산동", "화도읍", "수동면", "진접읍", "진건읍", "오남읍"],
+                "화성시": ["동탄동", "병점동", "태안동", "향남읍", "팔탄면", "매송면", "우정읍", "봉담읍", "남양읍", "서신면", "장안면", "양감면", "정남면", "송산면", "마도면", "비봉면", "새솔동"],
+                "평택시": ["송탄동", "평택동", "안중읍", "포승읍", "청북읍", "오성면", "팽성읍", "서탄면", "고덕면", "현덕면", "진위면"],
+                "의정부시": ["의정부동", "호원동", "장암동", "신곡동", "자금동", "가능동", "녹양동", "민락동"],
+                "시흥시": ["대야동", "정왕동", "신천동", "연성동", "은행동", "장현동", "매화동", "목감동"],
+                "파주시": ["금촌동", "운정동", "교하동", "문산읍", "탄현면", "법원읍", "조리읍", "파주읍", "월롱면", "장단면", "진동면", "진서면", "적성면", "파평면", "광탄면"],
+                "김포시": ["김포동", "사우동", "풍무동", "장기동", "구래동", "마산동", "운양동", "고촌읍", "월곶면", "하성면", "대곶면", "통진읍"]
+            },
+            "강원도": {
+                "춘천시": ["소양동", "조양동", "퇴계동", "효자동", "약사명동", "근화동", "교동", "조운동", "칠전동", "온의동", "후평동", "석사동"],
+                "원주시": ["중앙동", "원동", "반곡동", "학성동", "단계동", "명륜동", "태장동", "우산동", "개운동", "관설동", "흥업면", "문막읍", "소초면", "호저면", "지정면", "부론면", "신림면", "판부면", "인제면"],
+                "강릉시": ["홍제동", "중앙동", "성덕동", "교동", "옥천동", "포남동", "초당동", "견소동", "송정동", "강문동", "내곡동", "사천면", "연곡면", "왕산면", "구정면", "강동면", "옥계면", "주문진읍"]
+            },
+            "충청북도": {
+                "청주시": ["상당구", "서원구", "흥덕구", "청원구"],
+                "충주시": ["충주동", "안림동", "연수동", "금가면", "노은면", "다인면", "대소원면", "동량면", "산척면", "소태면", "수안보면", "신니면", "살미면", "앙성면", "엄정면", "종민동", "중앙탑면", "가금면"],
+                "제천시": ["청전동", "영서동", "의림동", "고암동", "신월동", "화산동", "송학면", "백운면", "봉양읍", "금성면", "청풍면", "수산면", "덕산면", "한수면", "영춘면"]
+            },
+            "충청남도": {
+                "천안시": ["동남구", "서북구"],
+                "공주시": ["중학동", "웅진동", "금성동", "신관동", "옥룡동", "정안면", "우성면", "이인면", "탄천면", "계룡면", "의당면", "유구읍", "반포면", "장기면", "사곡면", "월송동"],
+                "보령시": ["대천동", "궁촌동", "명천동", "주포면", "오천면", "천북면", "청라면", "청소면", "웅천읍", "미산면", "성주면", "주교면", "남포면"]
+            },
+            "전라북도": {
+                "전주시": ["완산구", "덕진구"],
+                "군산시": ["소룡동", "신풍동", "개정동", "수송동", "조촌동", "경암동", "구암동", "대야면", "개정면", "성산면", "나포면", "옥도면", "옥구읍", "임피면", "서수면"],
+                "익산시": ["인북동", "모현동", "부송동", "영등동", "어양동", "마동", "송학동", "팔봉동", "함라면", "성당면", "낭산면", "여산면", "금마면", "왕궁면", "용안면", "망성면", "춘포면", "오산면", "함열읍", "웅포면"]
+            },
+            "전라남도": {
+                "목포시": ["중앙동", "서산동", "죽교동", "온금동", "연동", "상동", "하당동", "산정동", "용해동", "율도동", "이로동"],
+                "여수시": ["중앙동", "서강동", "동천동", "광림동", "수정동", "여천동", "쌍봉동", "문수동", "미평동", "만덕동", "소라면", "남면", "화정면", "삼산면", "화양면"],
+                "순천시": ["조례동", "향동", "연향동", "조곡동", "덕연동", "인제동", "왕조동", "도사동", "해룡면", "황전면", "상사면", "별량면", "낙안면", "외서면", "송광면", "주암면", "승주읍"]
+            },
+            "경상북도": {
+                "포항시": ["남구", "북구"],
+                "경주시": ["경주동", "성동동", "황남동", "용강동", "보문동", "현곡면", "외동읍", "건천읍", "감포읍", "양북면", "양남면", "내남면", "서면", "안강읍", "산내면", "천북면", "울주군"],
+                "안동시": ["안동동", "평화동", "중구동", "서부동", "송천동", "남선면", "남후면", "도산면", "서후면", "녹전면", "길안면", "임하면", "임동면", "일직면", "북후면", "와룡면", "예안면", "풍천면", "풍산읍"]
+            },
+            "경상남도": {
+                "창원시": ["의창구", "성산구", "마산합포구", "마산회원구", "진해구"],
+                "진주시": ["상평동", "상대동", "하대동", "중앙동", "성북동", "이반성면", "대곡면", "금곡면", "집현면", "미천면", "지수면", "정촌면", "사봉면", "문산읍", "내동면", "명석면", "금산면"],
+                "통영시": ["중앙동", "북신동", "무전동", "봉평동", "광도면", "산양읍", "용남면", "도산면", "욕지면", "한산면", "사량면"]
+            },
+            "제주특별자치도": {
+                "제주시": ["일도동", "이도동", "삼도동", "용담동", "건입동", "화북동", "삼양동", "봉개동", "아라동", "오라동", "연동", "노형동", "외도동", "이호동", "도두동", "애월읍", "조천읍", "구좌읍", "우도면", "한림읍", "한경면", "추자면"],
+                "서귀포시": ["서귀동", "중앙동", "천지동", "효돈동", "영천동", "동홍동", "서호동", "토평동", "신효동", "중문동", "예래동", "하원동", "강정동", "법환동", "호근동", "위미동", "신창동", "하모동", "대포동", "색달동", "남원읍", "성산읍", "안덕면", "표선면", "대정읍"]
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 지역 드롭다운 초기화
+            setupRegionGroup(["level1", "level2", "level3"]);
+            
+            updateStats();
+            loadHistoryDisplay();
+        });
+
+        // 지역 드롭다운 초기화 - event-create.html과 동일한 방식
+        function setupRegionGroup(ids) {
+            const [level1, level2, level3] = ids.map(id => document.getElementById(id));
+            const initialText = '선택';
+            
+            // Level 1 초기화
+            clearAndSetDefault(level1, initialText);
+            Object.keys(regionData).forEach(region => {
+                const option = document.createElement('option');
+                option.value = region;
+                option.textContent = region;
+                level1.appendChild(option);
+            });
+            
+            level1.addEventListener('change', function() {
+                const selectedRegion = this.value;
+                clearAndSetDefault(level2, initialText);
+                clearAndSetDefault(level3, initialText);
+                
+                if (selectedRegion && regionData[selectedRegion]) {
+                    Object.keys(regionData[selectedRegion]).forEach(subRegion => {
+                        const option = document.createElement('option');
+                        option.value = subRegion;
+                        option.textContent = subRegion;
+                        level2.appendChild(option);
+                    });
+                }
+            });
+            
+            level2.addEventListener('change', function() {
+                const selectedRegion = level1.value;
+                const selectedSubRegion = this.value;
+                clearAndSetDefault(level3, initialText);
+                
+                if (selectedRegion && selectedSubRegion && regionData[selectedRegion] && regionData[selectedRegion][selectedSubRegion]) {
+                    regionData[selectedRegion][selectedSubRegion].forEach(district => {
+                        const option = document.createElement('option');
+                        option.value = district;
+                        option.textContent = district;
+                        level3.appendChild(option);
+                    });
+                }
+            });
+        }
+        
+        function clearAndSetDefault(select, defaultText) {
+            select.innerHTML = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = defaultText;
+            select.appendChild(defaultOption);
+        }
+
+
+        // 검색 실행
+        async function performSearch() {
+            const startTime = Date.now();
+            
+            // 검색 파라미터 수집
+            const params = collectSearchParams();
+            const queryString = new URLSearchParams(params).toString();
+            const requestUrl = `/api/v1/events/search${queryString ? '?' + queryString : ''}`;
+
+            // 디버깅 정보 표시
+            updateDebugInfo(requestUrl, params, null);
+
+            try {
+                const response = await fetch(requestUrl);
+                const data = await response.json();
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+
+                // 통계 업데이트
+                searchStats.totalSearches++;
+                searchStats.responseTimes.push(responseTime);
+                
+                // 검색 결과 표시
+                displaySearchResults(data, response.ok, responseTime);
+                
+                // 디버깅 정보 업데이트
+                updateDebugInfo(requestUrl, params, data);
+                
+                // 검색 히스토리에 추가
+                addToHistory(params, data.length || 0, responseTime);
+                
+                updateStats();
+
+            } catch (error) {
+                displaySearchResults({ error: error.message }, false, Date.now() - startTime);
+                updateDebugInfo(requestUrl, params, { error: error.message });
+            }
+        }
+
+        // 검색 파라미터 수집
+        function collectSearchParams() {
+            const params = {};
+            
+            const keyword = document.getElementById('keyword').value.trim();
+            if (keyword) params.keyword = keyword;
+            
+            const level1 = document.getElementById('level1').value;
+            const level2 = document.getElementById('level2').value;
+            const level3 = document.getElementById('level3').value;
+            
+            if (level1) params['regionDto.level1'] = level1;
+            if (level2) params['regionDto.level2'] = level2;
+            if (level3) params['regionDto.level3'] = level3;
+            
+            const eventType = document.getElementById('eventType').value;
+            if (eventType) params.eventType = eventType;
+            
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            if (startDate) params.startDate = startDate;
+            if (endDate) params.endDate = endDate;
+            
+            return params;
+        }
+
+        // 검색 결과 표시
+        function displaySearchResults(data, isSuccess, responseTime) {
+            const resultDiv = document.getElementById('searchResult');
+            resultDiv.style.display = 'block';
+            
+            if (isSuccess) {
+                const count = Array.isArray(data) ? data.length : 0;
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = `<h4>✅ 검색 성공 (${responseTime}ms) - ${count}개 결과</h4><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                document.getElementById('lastResultCount').textContent = count;
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h4>❌ 검색 실패 (${responseTime}ms)</h4><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                document.getElementById('lastResultCount').textContent = 'Error';
+            }
+        }
+
+        // 디버깅 정보 업데이트
+        function updateDebugInfo(url, params, response) {
+            document.getElementById('requestUrl').innerHTML = `<pre>${url}</pre>`;
+            document.getElementById('requestParams').innerHTML = `<pre>${JSON.stringify(params, null, 2)}</pre>`;
+            if (response !== null) {
+                document.getElementById('responseData').innerHTML = `<pre>${JSON.stringify(response, null, 2)}</pre>`;
+            }
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            document.getElementById('totalSearches').textContent = searchStats.totalSearches;
+            
+            if (searchStats.responseTimes.length > 0) {
+                const avgTime = Math.round(
+                    searchStats.responseTimes.reduce((a, b) => a + b, 0) / searchStats.responseTimes.length
+                );
+                document.getElementById('averageTime').textContent = avgTime;
+            }
+        }
+
+        // 검색 히스토리 관리
+        function addToHistory(params, resultCount, responseTime) {
+            const historyItem = {
+                timestamp: new Date().toLocaleString(),
+                params: params,
+                resultCount: resultCount,
+                responseTime: responseTime
+            };
+            
+            searchStats.searchHistory.unshift(historyItem);
+            if (searchStats.searchHistory.length > 10) {
+                searchStats.searchHistory.pop(); // 최근 10개만 유지
+            }
+            
+            localStorage.setItem('eventSearchHistory', JSON.stringify(searchStats.searchHistory));
+            loadHistoryDisplay();
+        }
+
+        function loadHistoryDisplay() {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            
+            searchStats.searchHistory.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <strong>${item.timestamp}</strong> 
+                    (${item.resultCount}건, ${item.responseTime}ms)<br>
+                    <small>${JSON.stringify(item.params)}</small>
+                `;
+                div.onclick = () => restoreFromHistory(item.params);
+                historyList.appendChild(div);
+            });
+        }
+
+        function restoreFromHistory(params) {
+            // 폼에 히스토리 데이터 복원
+            document.getElementById('keyword').value = params.keyword || '';
+            document.getElementById('eventType').value = params.eventType || '';
+            document.getElementById('startDate').value = params.startDate || '';
+            document.getElementById('endDate').value = params.endDate || '';
+            
+            // 지역 정보 복원
+            if (params['regionDto.level1']) {
+                document.getElementById('level1').value = params['regionDto.level1'];
+                document.getElementById('level1').dispatchEvent(new Event('change'));
+                
+                setTimeout(() => {
+                    if (params['regionDto.level2']) {
+                        document.getElementById('level2').value = params['regionDto.level2'];
+                        document.getElementById('level2').dispatchEvent(new Event('change'));
+                        
+                        setTimeout(() => {
+                            if (params['regionDto.level3']) {
+                                document.getElementById('level3').value = params['regionDto.level3'];
+                            }
+                        }, 100);
+                    }
+                }, 100);
+            }
+        }
+
+        // 테스트 시나리오 로드
+        function loadScenario(type) {
+            clearForm();
+            
+            switch (type) {
+                case 'all':
+                    // 전체 조회 - 파라미터 없음
+                    break;
+                case 'seoul':
+                    document.getElementById('level1').value = '서울특별시';
+                    document.getElementById('level1').dispatchEvent(new Event('change'));
+                    break;
+                case 'concert':
+                    document.getElementById('eventType').value = 'CONCERT';
+                    break;
+                case 'recent':
+                    const today = new Date();
+                    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+                    document.getElementById('startDate').value = today.toISOString().split('T')[0];
+                    document.getElementById('endDate').value = nextWeek.toISOString().split('T')[0];
+                    break;
+                case 'keyword':
+                    document.getElementById('keyword').value = '음악';
+                    break;
+                case 'complex':
+                    document.getElementById('keyword').value = '페스티벌';
+                    document.getElementById('level1').value = '경기도';
+                    document.getElementById('eventType').value = 'FESTIVAL';
+                    const startDate = new Date();
+                    document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+                    document.getElementById('level1').dispatchEvent(new Event('change'));
+                    break;
+            }
+        }
+        
+
+
+        // 유틸리티 함수들
+        function clearForm() {
+            document.getElementById('keyword').value = '';
+            document.getElementById('level1').value = '';
+            document.getElementById('level2').innerHTML = '<option value="">선택</option>';
+            document.getElementById('level3').innerHTML = '<option value="">선택</option>';
+            document.getElementById('eventType').value = '';
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            
+        }
+
+
+        function clearHistory() {
+            if (confirm('검색 히스토리를 모두 삭제하시겠습니까?')) {
+                searchStats.searchHistory = [];
+                localStorage.removeItem('eventSearchHistory');
+                loadHistoryDisplay();
+            }
+        }
+
+        function toggleDebugInfo() {
+            const debugInfo = document.getElementById('debugInfo');
+            debugInfo.classList.toggle('show');
+        }
+
+        function toggleHistory() {
+            const history = document.getElementById('searchHistory');
+            history.classList.toggle('show');
+        }
+    </script>
+</body>
+</html>

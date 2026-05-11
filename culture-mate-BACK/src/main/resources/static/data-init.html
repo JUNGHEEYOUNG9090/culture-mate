@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 초기화 관리</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        label {
+            display: inline-block;
+            width: 100px;
+            font-weight: bold;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            min-height: 20px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ 데이터 초기화 관리</h1>
+        
+        <div class="section">
+            <h3>📍 지역 데이터 초기화</h3>
+            <p>전국 시/도, 시/군/구, 읍/면/동 지역 데이터를 생성합니다.</p>
+            <button onclick="initRegions()">지역 데이터 생성</button>
+            <div id="regions-result" class="result"></div>
+        </div>
+
+        <div class="section">
+            <h3>👑 관리자 계정 생성</h3>
+            <p>시스템 관리자 계정을 생성합니다.</p>
+            <button onclick="initAdmin()">관리자 생성</button>
+            <div id="admin-result" class="result"></div>
+        </div>
+
+        <div class="section">
+            <h3>👥 더미 회원 데이터 생성</h3>
+            <p>테스트용 더미 회원들을 생성합니다.</p>
+            <div class="input-group">
+                <label for="member-count">생성 개수:</label>
+                <input type="number" id="member-count" value="20" min="1" max="100">
+                <button onclick="initMembers()">더미 회원 생성</button>
+            </div>
+            <div id="members-result" class="result"></div>
+        </div>
+
+        <div class="section" style="text-align: center; border-color: #dc3545; background-color: #f8f9fa;">
+            <h3 style="color: #dc3545;">⚠️ 주의사항</h3>
+            <p>이 도구는 개발/테스트 환경에서만 사용하세요.</p>
+            <p>운영 환경에서는 절대 사용하지 마십시오!</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1/init';
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.className = 'result loading';
+            element.textContent = '처리 중...';
+        }
+
+        function showResult(elementId, message, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${isSuccess ? 'success' : 'error'}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(url, elementId, method = 'POST') {
+            showLoading(elementId);
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const result = await response.json();
+                showResult(elementId, result.message, response.ok);
+            } catch (error) {
+                showResult(elementId, `오류 발생: ${error.message}`, false);
+            }
+        }
+
+        function initRegions() {
+            makeRequest(`${API_BASE}/regions`, 'regions-result');
+        }
+
+        function initAdmin() {
+            makeRequest(`${API_BASE}/admin`, 'admin-result');
+        }
+
+        function initMembers() {
+            const count = document.getElementById('member-count').value;
+            makeRequest(`${API_BASE}/members?count=${count}`, 'members-result');
+        }
+    </script>
+</body>
+</html>

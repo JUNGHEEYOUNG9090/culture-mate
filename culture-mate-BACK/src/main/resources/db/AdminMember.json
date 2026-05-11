@@ -1,0 +1,42 @@
+[
+  {
+    "loginId": "admin1",
+    "password": "admin#1234",
+    "nickname": "admin1",
+    "intro": "",
+    "mbti": "",
+    "email": ""
+  },
+  {
+    "loginId": "admin2",
+    "password": "admin#1234",
+    "nickname": "admin2",
+    "intro": "",
+    "mbti": "",
+    "email": ""
+  },
+  {
+    "loginId": "admin3",
+    "password": "admin#1234",
+    "nickname": "admin3",
+    "intro": "",
+    "mbti": "",
+    "email": ""
+  },
+  {
+    "loginId": "admin4",
+    "password": "admin#1234",
+    "nickname": "admin4",
+    "intro": "",
+    "mbti": "",
+    "email": ""
+  },
+  {
+    "loginId": "admin5",
+    "password": "admin#1234",
+    "nickname": "admin5",
+    "intro": "",
+    "mbti": "",
+    "email": ""
+  }
+]

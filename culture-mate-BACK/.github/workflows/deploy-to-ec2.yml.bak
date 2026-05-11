@@ -1,0 +1,79 @@
+name: CultureMate Build and Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+    - name: Grant execute permission for Gradle
+      run: chmod +x gradlew
+
+    - name: Build with Gradle Wrapper
+      run: ./gradlew build -x test
+
+    - name: Clean old jar files (Free up space)
+      uses: appleboy/ssh-action@v1
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        script: |
+          cd /home/ubuntu/culturemate-be
+          rm -f *.jar
+
+    - name: Upload jar to EC2
+      uses: appleboy/scp-action@v1
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        source: "build/libs/*.jar"
+        target: "/home/ubuntu/culturemate-be/"
+        strip_components: 2  # build/libs/ 경로 제거 후 전달
+
+    - name: Execute remote SSH commands (Deploy)
+      uses: appleboy/ssh-action@v1
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        script: |
+          export PATH=$PATH:/home/ubuntu/.nvm/versions/node/v22.16.0/bin
+          cd /home/ubuntu/culturemate-be
+          mv $(ls -t *.jar | grep -v "^app.jar$" | head -n 1) app.jar
+          pm2 reload culturemate-be || pm2 start ecosystem.config.js
+
+
+  dependency-submission:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Generate and submit dependency graph
+      uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0

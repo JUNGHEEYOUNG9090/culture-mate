@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이벤트 생성</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box; }
+        textarea { height: 100px; resize: vertical; }
+        button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .result { margin-top: 20px; padding: 10px; background-color: #f8f9fa; border-radius: 3px; }
+        .error { color: red; }
+        .success { color: green; }
+        .image-preview { margin-top: 10px; }
+        .image-preview img { max-width: 200px; max-height: 200px; margin: 5px; border: 1px solid #ddd; }
+        
+        /* 한 줄 단위 이미지 관리 스타일 */
+        .image-list {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .image-row {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            background-color: #f9f9f9;
+        }
+        .image-row:last-child {
+            border-bottom: none;
+        }
+        .image-row:hover {
+            background-color: #f0f0f0;
+        }
+        .image-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        .image-preview-container {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+        }
+        .image-preview-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+        }
+        .file-info {
+            flex: 1;
+            margin-left: 10px;
+        }
+        .file-name {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+            word-break: break-all;
+        }
+        .file-size {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .image-controls {
+            display: flex;
+            gap: 5px;
+        }
+        .control-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        .control-btn:hover { background: #5a6268; }
+        .control-btn:disabled { background: #dee2e6; color: #6c757d; cursor: not-allowed; }
+        .control-btn.up-btn { background: #28a745; }
+        .control-btn.up-btn:hover { background: #218838; }
+        .control-btn.down-btn { background: #ffc107; color: #212529; }
+        .control-btn.down-btn:hover { background: #e0a800; }
+        .control-btn.remove-btn { background: #dc3545; }
+        .control-btn.remove-btn:hover { background: #c82333; }
+        .add-image-section {
+            margin-top: 10px;
+            padding: 15px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            text-align: center;
+            background-color: #f9f9f9;
+        }
+        .add-image-section:hover {
+            border-color: #007bff;
+            background-color: #e7f3ff;
+        }
+        .add-image-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .add-image-btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .form-row .form-group { flex: 1; margin-bottom: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 이벤트 생성</h1>
+        <a href="/event-test.html">이벤트 목록 및 검색으로 돌아가기</a>
+
+        <div class="section">
+            <form id="createForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventType">이벤트 타입</label>
+                        <select id="eventType" required>
+                            <option value="">선택하세요</option>
+                            <option value="MUSICAL">뮤지컬</option>
+                            <option value="MOVIE">영화</option>
+                            <option value="THEATER">연극</option>
+                            <option value="EXHIBITION">전시</option>
+                            <option value="CLASSIC">클래식</option>
+                            <option value="DANCE">무용</option>
+                            <option value="CONCERT">콘서트</option>
+                            <option value="FESTIVAL">페스티벌</option>
+                            <option value="LOCAL_EVENT">지역 행사</option>
+                            <option value="OTHER">기타</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="title">제목</label>
+                        <input type="text" id="title" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="level1">지역 Level 1</label>
+                        <select id="level1"><option value="">선택</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="level2">지역 Level 2</label>
+                        <select id="level2"><option value="">선택</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="level3">지역 Level 3</label>
+                        <select id="level3"><option value="">선택</option></select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventLocation">장소명</label>
+                        <input type="text" id="eventLocation" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="address">주소</label>
+                        <input type="text" id="address">
+                    </div>
+                    <div class="form-group">
+                        <label for="addressDetail">상세주소</label>
+                        <input type="text" id="addressDetail">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startDate">시작일</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">종료일</label>
+                        <input type="date" id="endDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="durationMin">소요시간(분)</label>
+                        <input type="number" id="durationMin" min="0" placeholder="예: 120">
+                    </div>
+                    <div class="form-group">
+                        <label for="minAge">최소 연령</label>
+                        <input type="number" id="minAge" min="0" placeholder="기본값: 0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">설명</label>
+                    <textarea id="description"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>가격 정보</label>
+                    <div id="ticketPrices">
+                        <!-- 동적 가격 입력 필드 -->
+                    </div>
+                    <button type="button" id="addPrice" style="width: auto; padding: 5px 10px; background-color: #28a745; margin-top: 5px;">가격 추가</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="mainImage">메인 이미지</label>
+                    <input type="file" id="mainImage" accept="image/*">
+                    <div id="mainImagePreview" class="image-preview"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>설명 이미지들</label>
+                    <div class="image-list" id="imageList">
+                        <!-- 이미지 행들이 여기에 동적으로 추가됩니다 -->
+                    </div>
+                    
+                    <div class="add-image-section">
+                        <input type="file" id="contentImages" accept="image/*" style="display: none;">
+                        <button type="button" class="add-image-btn" onclick="document.getElementById('contentImages').click()">
+                            📷 이미지 추가
+                        </button>
+                        <small style="color: #666; margin-left: 10px;">한 번에 하나의 이미지를 추가할 수 있습니다</small>
+                    </div>
+                </div>
+
+                <button type="submit">이벤트 생성</button>
+            </form>
+            <div id="createResult" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_BASE = '/api/v1/regions/dropdown';
+        
+        // Helper function to populate a dropdown with API data
+        const populateDropdown = async (selectElement, apiUrl, initialText) => {
+            selectElement.innerHTML = '';
+            const initialOption = document.createElement('option');
+            initialOption.value = "";
+            initialOption.textContent = initialText;
+            selectElement.appendChild(initialOption);
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item;
+                        option.textContent = item;
+                        selectElement.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('지역 데이터 로딩 실패:', error);
+            }
+        };
+
+        // Function to set up cascading dropdowns with API calls
+        const setupRegionGroup = async (ids) => {
+            const [level1, level2, level3] = ids.map(id => document.getElementById(id));
+            const initialText = '선택';
+
+            // 1. Load Level 1 data on page load
+            await populateDropdown(level1, `${API_BASE}/level1`, initialText);
+
+            // 2. Add event listener to Level 1
+            level1.addEventListener('change', async () => {
+                const level1Value = level1.value;
+                // Reset level 2 and 3
+                level2.innerHTML = `<option value="">${initialText}</option>`;
+                level3.innerHTML = `<option value="">${initialText}</option>`;
+                
+                if (level1Value) {
+                    await populateDropdown(level2, `${API_BASE}/level2?level1=${encodeURIComponent(level1Value)}`, initialText);
+                }
+            });
+
+            // 3. Add event listener to Level 2
+            level2.addEventListener('change', async () => {
+                const level1Value = level1.value;
+                const level2Value = level2.value;
+                // Reset level 3
+                level3.innerHTML = `<option value="">${initialText}</option>`;
+                
+                if (level1Value && level2Value) {
+                    await populateDropdown(level3, `${API_BASE}/level3?level1=${encodeURIComponent(level1Value)}&level2=${encodeURIComponent(level2Value)}`, initialText);
+                }
+            });
+        };
+
+        // Initialize the region dropdowns for the create form
+        setupRegionGroup(['level1', 'level2', 'level3']);
+
+        // --- All other functions remain the same ---
+
+        // 이미지 미리보기
+        document.getElementById('mainImage').addEventListener('change', function(e) {
+            previewImage(e.target.files[0], 'mainImagePreview');
+        });
+
+        // 한 줄 단위 이미지 관리 시스템
+        let contentImagesArray = []; // 선택된 이미지 파일들을 순서대로 저장
+        
+        // 파일 선택 시 이미지 추가 (한 번에 하나씩)
+        document.getElementById('contentImages').addEventListener('change', function(e) {
+            const file = e.target.files[0]; // 하나의 파일만 처리
+            if (file && file.type.startsWith('image/')) {
+                addImageToList(file);
+            }
+            // 파일 입력 초기화 (같은 파일 재선택 가능)
+            e.target.value = '';
+        });
+
+        function addImageToList(file) {
+            contentImagesArray.push(file);
+            renderImageList();
+        }
+
+        function renderImageList() {
+            const container = document.getElementById('imageList');
+            container.innerHTML = '';
+            
+            contentImagesArray.forEach((file, index) => {
+                const imageRow = createImageRow(file, index);
+                container.appendChild(imageRow);
+            });
+        }
+
+        function createImageRow(file, index) {
+            const row = document.createElement('div');
+            row.className = 'image-row';
+            row.dataset.index = index;
+            
+            // 파일 정보와 썸네일을 동기적으로 처리
+            row.innerHTML = `
+                <div class="image-info">
+                    <div class="image-preview-container">
+                        <img class="image-preview-thumb" src="" alt="미리보기">
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${formatFileSize(file.size)}</div>
+                    </div>
+                </div>
+                <div class="image-controls">
+                    <button type="button" class="control-btn up-btn" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button type="button" class="control-btn down-btn" ${index === contentImagesArray.length - 1 ? 'disabled' : ''}>↓</button>
+                    <button type="button" class="control-btn remove-btn">삭제</button>
+                </div>
+            `;
+            
+            // 썸네일 이미지 로드
+            const img = row.querySelector('.image-preview-thumb');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            
+            // 이벤트 리스너 추가
+            const upBtn = row.querySelector('.up-btn');
+            const downBtn = row.querySelector('.down-btn');
+            const removeBtn = row.querySelector('.remove-btn');
+            
+            upBtn.addEventListener('click', () => moveImageUp(index));
+            downBtn.addEventListener('click', () => moveImageDown(index));
+            removeBtn.addEventListener('click', () => removeImage(index));
+            
+            return row;
+        }
+
+        function moveImageUp(index) {
+            if (index > 0) {
+                // 배열에서 위치 교환
+                [contentImagesArray[index], contentImagesArray[index - 1]] = 
+                [contentImagesArray[index - 1], contentImagesArray[index]];
+                renderImageList();
+            }
+        }
+
+        function moveImageDown(index) {
+            if (index < contentImagesArray.length - 1) {
+                // 배열에서 위치 교환
+                [contentImagesArray[index], contentImagesArray[index + 1]] = 
+                [contentImagesArray[index + 1], contentImagesArray[index]];
+                renderImageList();
+            }
+        }
+
+        function removeImage(index) {
+            contentImagesArray.splice(index, 1);
+            renderImageList();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function previewImage(file, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    container.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+
+        // 가격 정보 추가/삭제
+        document.getElementById('addPrice').addEventListener('click', function() {
+            const pricesDiv = document.getElementById('ticketPrices');
+            const priceEntry = document.createElement('div');
+            priceEntry.style.display = 'flex';
+            priceEntry.style.gap = '10px';
+            priceEntry.style.marginBottom = '10px';
+            priceEntry.innerHTML = `
+                <input type="text" class="ticketType" placeholder="티켓 종류 (예: 성인)" style="width: 40%;">
+                <input type="number" class="price" placeholder="가격" style="width: 40%;">
+                <button type="button" class="removePrice" style="width: auto; background-color: #dc3545;">삭제</button>
+            `;
+            pricesDiv.appendChild(priceEntry);
+        });
+
+        document.getElementById('ticketPrices').addEventListener('click', function(e) {
+            if (e.target.classList.contains('removePrice')) {
+                e.target.parentElement.remove();
+            }
+        });
+
+        // 이벤트 생성
+        document.getElementById('createForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            const regionDto = {
+                level1: document.getElementById('level1').value || null,
+                level2: document.getElementById('level2').value || null,
+                level3: document.getElementById('level3').value || null
+            };
+            const ticketPriceDto = Array.from(document.getElementById('ticketPrices').children).map(entry => ({
+                ticketType: entry.querySelector('.ticketType').value,
+                price: parseInt(entry.querySelector('.price').value)
+            })).filter(dto => dto.ticketType && !isNaN(dto.price));
+
+            const eventData = {
+                eventType: document.getElementById('eventType').value,
+                title: document.getElementById('title').value,
+                regionDto: (regionDto.level1 || regionDto.level2 || regionDto.level3) ? regionDto : null,
+                eventLocation: document.getElementById('eventLocation').value,
+                address: document.getElementById('address').value || null,
+                addressDetail: document.getElementById('addressDetail').value || null,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value || '9999-12-31',
+                durationMin: document.getElementById('durationMin').value ? parseInt(document.getElementById('durationMin').value) : null,
+                minAge: document.getElementById('minAge').value ? parseInt(document.getElementById('minAge').value) : null,
+                description: document.getElementById('description').value,
+                ticketPriceDto: ticketPriceDto
+            };
+
+            formData.append('eventRequestDto', new Blob([JSON.stringify(eventData)], {type: 'application/json'}));
+            const mainImage = document.getElementById('mainImage').files[0];
+            if (mainImage) formData.append('mainImage', mainImage);
+            // 재정렬된 이미지 파일들을 순서대로 전송
+            for (let file of contentImagesArray) {
+                formData.append('imagesToAdd', file);
+            }
+
+            try {
+                const response = await fetch('/api/v1/events', { method: 'POST', body: formData });
+                const result = await response.json();
+                const resultDiv = document.getElementById('createResult');
+                resultDiv.style.display = 'block';
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `<h4>✅ 이벤트 생성 성공!</h4><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<h4>❌ 생성 실패</h4><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                const resultDiv = document.getElementById('createResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h4>❌ 네트워크 오류</h4><p>${error.message}</p>`;
+            }
+        });
+    });
+    </script>
+</body>
+</html>

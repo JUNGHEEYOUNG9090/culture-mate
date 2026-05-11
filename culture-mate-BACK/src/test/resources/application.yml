@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: "CultureMate API"
+  datasource:
+    url: ${DB_URL}
+    username: ${TEST_DB_USERNAME}
+    password: ${TEST_DB_PASSWORD}
+    driver-class-name: ${DB_DRIVER}
+  jpa:
+    hibernate:
+      ddl-auto: ${TEST_DB_DDL_AUTO} # 개발시 update, 운영시 validate, 테스트시 create or create-drop
+    properties:
+      hibernate:
+      # show_sql: true
+      format_sql: true
+logging.level:
+  org.hibernate.SQL: debug
+  # org.hibernate.orm.jdbc.bind: trace
+
+custom:
+  path:
+    upload:
+      default: src/test/resources/static/images
+
+# JWT 설정 (테스트용)
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
+
+# CORS 설정 (테스트용)
+cors:
+  allowed-origins: http://localhost:3000
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+  max-age: 3600

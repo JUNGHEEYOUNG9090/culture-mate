@@ -1,0 +1,52 @@
+name: Diagnose Server Status
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check server status
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          port: ${{ secrets.SERVER_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "=== System Status ==="
+            uptime
+            echo ""
+
+            echo "=== Memory Usage ==="
+            free -h
+            echo ""
+
+            echo "=== Disk Usage ==="
+            df -h
+            echo ""
+
+            echo "=== Docker Containers ==="
+            docker ps -a
+            echo ""
+
+            echo "=== SSH Service Status ==="
+            systemctl status sshd | head -n 10
+            echo ""
+
+            echo "=== Recent SSH Connections ==="
+            journalctl -u sshd -n 20 --no-pager
+            echo ""
+
+            echo "=== Network Connections ==="
+            ss -tulpn | grep :15578
+            echo ""
+
+            echo "=== Backend Health Check ==="
+            curl -f http://localhost:8180/actuator/health || echo "Backend not responding"
+            echo ""
+
+            echo "=== Frontend Health Check ==="
+            curl -f http://localhost:3000 || echo "Frontend not responding"

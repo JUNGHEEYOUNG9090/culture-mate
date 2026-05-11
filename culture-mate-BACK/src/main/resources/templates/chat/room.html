@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${room.roomName}"></title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #chat-container { max-width: 800px; margin: 30px auto; border: 1px solid #ccc; border-radius: 5px; display: flex; flex-direction: column; height: 80vh; }
+        #messages { list-style-type: none; margin: 0; padding: 20px; overflow-y: auto; flex-grow: 1; border-bottom: 1px solid #ccc;}
+        #messages li { padding: 8px 12px; margin-bottom: 10px; border-radius: 20px; width: fit-content; max-width: 70%; }
+        #messages li.sent { background-color: #dcf8c6; margin-left: auto; }
+        #messages li.received { background-color: #f1f0f0; }
+        #form { display: flex; padding: 10px; }
+        #form input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        #form button { padding: 10px 20px; margin-left: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <h2 style="text-align: center; padding: 10px; margin: 0; border-bottom: 1px solid #ccc;" th:text="${room.roomName}">Chat Room</h2>
+    <ul id="messages"></ul>
+    <form id="form" action="">
+        <input id="input" autocomplete="off" placeholder="Type a message..." /><button>Send</button>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const messages = document.getElementById('messages');
+
+        const roomId = [[${room.id}]];
+        const memberId = [[${memberId}]]; // Controller에서 전달된 memberId
+
+        if (!roomId) {
+            console.error('Room ID is not available.');
+            return;
+        }
+
+        const socket = new SockJS('/ws-chat');
+        const stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function (frame) {
+            console.log('Connected: ' + frame);
+
+            // 구독
+            stompClient.subscribe('/topic/chatroom/' + roomId, function (message) {
+                showMessage(JSON.parse(message.body));
+            });
+
+            // 이전 메시지 불러오기
+            fetchPreviousMessages();
+        });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (input.value && stompClient) {
+                const chatMessage = {
+                    'roomId': roomId,
+                    'senderId': memberId,
+                    'content': input.value
+                };
+                stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+                input.value = '';
+            }
+        });
+
+        function showMessage(message) {
+            const li = document.createElement('li');
+            li.textContent = message.content;
+
+            // 내가 보낸 메시지인지 확인
+            if (message.senderId === memberId) {
+                li.className = 'sent';
+            } else {
+                li.className = 'received';
+            }
+
+            messages.appendChild(li);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function fetchPreviousMessages() {
+            fetch(`/api/chat/room/${roomId}/messages`)
+                .then(response => response.json())
+                .then(messageHistory => {
+                    messageHistory.forEach(message => {
+                        showMessage(message);
+                    });
+                })
+                .catch(error => console.error('Error fetching previous messages:', error));
+        }
+    });
+</script>
+
+</body>
+</html>

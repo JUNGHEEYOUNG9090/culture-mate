@@ -1,0 +1,77 @@
+# 운영 환경 설정
+spring:
+  # DevTools 비활성화 (운영 환경)
+  devtools:
+    restart:
+      enabled: false
+    livereload:
+      enabled: false
+
+  # 데이터베이스 설정 (Oracle 사용)
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: ${DB_DRIVER}
+    # 커넥션 풀 설정 (HikariCP)
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: validate  # 운영 환경: 스키마 검증만 (변경 안함)
+    properties:
+      hibernate:
+        show_sql: false  # 운영 환경: SQL 로그 비활성화
+        format_sql: false
+
+# 로깅 설정 (운영 환경: 최소 로그)
+logging:
+  level:
+    org.hibernate.SQL: warn
+
+    com.culturemate.culturemate_api: INFO
+    com.culturemate.culturemate_api.service: INFO
+    com.culturemate.culturemate_api.controller: INFO
+    com.culturemate.culturemate_api.config: INFO
+
+    org.springframework.security: WARN
+    org.springframework.web.socket: INFO
+
+    root: INFO
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+
+  file:
+    name: logs/culturemate.log
+    max-size: 10MB
+    max-history: 30
+    total-size-cap: 1GB
+
+# 이미지 업로드 경로 (EC2 배포 환경)
+custom:
+  path:
+    upload:
+      default: ./images  # JAR 실행 위치 기준 상대 경로
+
+# CORS 설정 (운영 환경: 실제 도메인으로 변경 필요)
+cors:
+  allowed-origins: ${FRONTEND_URL:http://localhost:3000}  # 배포 시 실제 도메인으로 수정
+  allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
+  allowed-headers: "Content-Type,Authorization,X-Requested-With,Accept,Accept-Language,Origin"
+  allow-credentials: true
+  max-age: 3600
+
+# OpenAPI/Swagger 설정 (운영 환경: 비활성화 권장)
+springdoc:
+  api-docs:
+    enabled: false  # 운영 환경: API 문서 비활성화
+  swagger-ui:
+    enabled: false  # 운영 환경: Swagger UI 비활성화

@@ -1,0 +1,40 @@
+name: Check Backend Logs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-logs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check backend container logs
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          port: ${{ secrets.SERVER_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "=== Backend Container Logs (Last 100 lines) ==="
+            docker logs culturemate-backend --tail 100
+            echo ""
+
+            echo "=== Backend Container Details ==="
+            docker inspect culturemate-backend | grep -A 10 "Health"
+            echo ""
+
+            echo "=== Check if Spring Boot is running ==="
+            docker exec culturemate-backend ps aux | grep java || echo "No Java process found"
+            echo ""
+
+            echo "=== Environment Variables ==="
+            docker exec culturemate-backend env | grep -E "SPRING|DB|JWT" || echo "No env vars found"
+            echo ""
+
+            echo "=== Port Bindings ==="
+            docker port culturemate-backend
+            echo ""
+
+            echo "=== Test connection inside container ==="
+            docker exec culturemate-backend curl -f http://localhost:8080/actuator/health || echo "Health check failed"

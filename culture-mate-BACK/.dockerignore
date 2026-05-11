@@ -1,0 +1,50 @@
+# Git 관련
+.git
+.gitignore
+.gitattributes
+
+# Gradle 빌드 결과물
+build/
+.gradle/
+gradle-wrapper.jar
+
+# IDE 설정 파일
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+
+# 환경 변수 파일 (보안 - 반드시 제외)
+.env
+.env.*
+
+# 로그 파일
+logs/
+*.log
+
+# 데이터베이스 파일
+*.db
+*.mv.db
+*.trace.db
+
+# 임시 파일
+*.tmp
+*.bak
+*.swp
+*~
+
+# 문서 파일 (이미지에 불필요)
+*.md
+README.md
+HELP.md
+
+# 테스트 관련
+bin/
+out/
+
+# 업로드된 이미지 (런타임에 볼륨으로 관리)
+src/main/resources/static/images/
